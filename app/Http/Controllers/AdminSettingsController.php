@@ -234,4 +234,90 @@ class AdminSettingsController extends Controller
 
         return response()->download($path, $name);
     }
+
+    // ---------------------------------------------------------------- GSoft monthly bills (administrator)
+
+    public function monthlyBills()
+    {
+        return $this->page('admin.settings.monthly_bills', [
+            'payment_type_list' => DB::table('gsoft_payment_types')->where('status', 1)->get()->map(fn ($r) => (array) $r)->all(),
+            'users_list' => DB::table('m_user')->where('type', 2)->orderBy('network_name')->get(['id', 'network_name'])->map(fn ($r) => (array) $r)->all(),
+            'networks' => DB::table('m_network')->get(['lcoCode', 'network_name'])->map(fn ($r) => (array) $r)->all(),
+        ]);
+    }
+
+    public function generateMonthlyBills(\App\Services\GsoftBillingService $billing)
+    {
+        $billing->generateAll();
+
+        return response('Invoice generated');
+    }
+
+    public function monthlyBillsData(Request $request, \App\Services\GsoftBillingService $billing)
+    {
+        foreach (['user_id', 'network', 'status'] as $k) {
+            if (! $request->has($k)) {
+                return response('Invalid request');
+            }
+        }
+        $data = $billing->adminScreen((int) $request->input('status'), (int) $request->input('user_id'), (string) $request->input('network'));
+
+        return response(view('admin.settings.monthly_bills_data', ['data' => $data])->render());
+    }
+
+    public function monthlyBillsView(Request $request, \App\Services\GsoftBillingService $billing)
+    {
+        if (! $request->has('current_month') || ! $request->has('network')) {
+            return response('');
+        }
+        $bill = $billing->billFor((string) $request->input('network'), (string) $request->input('current_month'));
+        if (! $bill) {
+            return response('No bill found');
+        }
+
+        return response(view('admin.settings.monthly_bills_view', [
+            'bill' => $bill, 'network' => (string) $request->input('network'),
+            'status' => \App\Services\GsoftBillingService::STATUS[(int) $bill->bill_status] ?? '',
+        ])->render());
+    }
+
+    public function monthlyPaymentTypeView(Request $request)
+    {
+        if (! $request->has('payment_type') || ! $request->has('amount') || ! $request->has('network')) {
+            return response('');
+        }
+
+        return response('<div style="text-align:center">
+				<button type="button" style="margin-top: 20px;" onClick="cashCollectedClick();return false;" class="form-control btn-warning">Cash collected and complete payment</button>
+			</div>');
+    }
+
+    /** Confirms a bill as paid (payment type 0 = direct cash, ids from gsoft_payment_types) or free (-2). Administrator only. */
+    public function completePayment(Request $request, \App\Services\GsoftBillingService $billing)
+    {
+        if (! $request->has('current_month') || ! $request->has('payment_type') || ! $request->has('network')) {
+            return response('');
+        }
+        $type = (string) $request->input('payment_type');
+        if (! preg_match('/^-?\d+$/', $type) || ((int) $type !== -2 && (int) $type !== 0 && ! DB::table('gsoft_payment_types')->where('id', (int) $type)->exists())) {
+            return response('Invalid payment type', 422);
+        }
+        $billing->complete((string) $request->input('network'), (string) $request->input('current_month'), (int) $type);
+
+        return response('');
+    }
+
+    /** Networks of a user (or all) for the filter drop-down. */
+    public function gsoftNetworkList(Request $request)
+    {
+        if (! $request->has('user_id')) {
+            return response('');
+        }
+        $q = DB::table('m_network');
+        if ((int) $request->input('user_id') !== -1) {
+            $q->where('created_by', (int) $request->input('user_id'));
+        }
+
+        return response()->json(['success' => true, 'data' => $q->get(['lcoCode', 'network_name'])->all()]);
+    }
 }

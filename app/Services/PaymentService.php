@@ -36,8 +36,9 @@ class PaymentService
         $trantype = (string) $in['trantype'];
         $comment = (string) ($in['comment'] ?? '');
         $otherMobile = (string) ($in['othermobile'] ?? '');
+        $isApp = (bool) ($in['is_app'] ?? false);   // payments made through the mobile app (AgentApi) are flagged is_app=1
 
-        return DB::transaction(function () use ($subscriberId, $rawPaid, $paid, $discount, $trantype, $comment, $otherMobile, $agentId, $ownerUserId) {
+        return DB::transaction(function () use ($subscriberId, $rawPaid, $paid, $discount, $trantype, $comment, $otherMobile, $agentId, $ownerUserId, $isApp) {
             // Mutex per customer (the customer row always exists, unlike a not-yet-created balance row).
             DB::table('m_customer')->where('id', $subscriberId)->lockForUpdate()->first(['id']);
 
@@ -75,7 +76,7 @@ class PaymentService
                 'dbafterdiscount' => $after,
                 'timestamp' => $timestamp,
                 'is_misc' => $isMisc,
-            ]);
+            ] + ($isApp ? ['is_app' => 1] : []));
 
             if (DB::table('subscriberbalance')->where('subscriberid', $subscriberId)->exists()) {
                 DB::table('subscriberbalance')->where('subscriberid', $subscriberId)->update(['amountdue' => $after, 'timestamp' => $timestamp]);
@@ -122,5 +123,37 @@ class PaymentService
         }
 
         return bcadd($v, '0', 2);
+    }
+    /**
+     * Broadband payment (port of Transaction::add_broadband_payment): same ledger row as a cash payment, but the description is the
+     * typed comment, no SMS is queued and is_misc stays 0. Locked and exact like record().
+     *
+     * @return array{id:int, due_before:string, balance_after:string}
+     */
+    public function recordBroadband(int|string $subscriberId, string $paid, string $discount, string $comment, int|string $agentId): array
+    {
+        $paidM = $this->money($paid);
+        $discM = $this->money($discount === '' ? '0' : $discount);
+        $subscriberId = (string) $subscriberId;
+
+        return DB::transaction(function () use ($subscriberId, $paidM, $discM, $comment, $agentId) {
+            DB::table('m_customer')->where('id', $subscriberId)->lockForUpdate()->first(['id']);
+            $due = $this->money((string) (DB::table('subscriberbalance')->where('subscriberid', $subscriberId)->value('amountdue') ?? '0'));
+            $dueBalance = bcsub($due, $paidM, 2);
+            $after = bcsub($dueBalance, $discM, 2);
+            $ts = self::milliseconds();
+            $id = DB::table('subscriberpayments')->insertGetId([
+                'transactiontype' => '1', 'subscriberid' => $subscriberId, 'agentid' => (string) $agentId, 'description' => $comment,
+                'dueamount' => $due, 'paidamount' => $paidM, 'discount' => $discM, 'subscriptioncharge' => 0,
+                'duebalance' => $dueBalance, 'dbafterdiscount' => $after, 'timestamp' => $ts,
+            ]);
+            if (DB::table('subscriberbalance')->where('subscriberid', $subscriberId)->exists()) {
+                DB::table('subscriberbalance')->where('subscriberid', $subscriberId)->update(['amountdue' => $after, 'timestamp' => $ts]);
+            } else {
+                DB::table('subscriberbalance')->insert(['subscriberid' => $subscriberId, 'amountdue' => $after, 'timestamp' => $ts]);
+            }
+
+            return ['id' => $id, 'due_before' => $due, 'balance_after' => $after];
+        });
     }
 }

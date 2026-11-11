@@ -398,4 +398,71 @@ class SubscriberController extends Controller
 
         return response()->json($row);
     }
+
+    // ---------------------------------------------------------------- bill generation (buttons on the subscriber lists)
+
+    /** Admin, or a user holding the "generatebill" menu (the same rule the lists use to show the buttons). */
+    private function mayGenerateBills(): bool
+    {
+        return $this->hasGenerateBill();
+    }
+
+    private function billJson(array $payload)
+    {
+        return response()->json($payload);
+    }
+
+    /** POST Subscriber/generate_network_bill: bills every active customer of one network for the chosen month. */
+    public function generateNetworkBill(Request $request, \App\Services\BillGenerationService $bills)
+    {
+        if (! $this->mayGenerateBills()) {
+            return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        // An LCO can only bill its own network (the old code trusted the posted network, so any LCO with the menu could bill any network).
+        $network = $this->isAdmin() ? (string) $request->input('network', '') : (string) session('lcoCode', '');
+        if ($network === '') {
+            $network = (string) session('lcoCode', '');
+        }
+        if ($network === '' || ! DB::table('m_network')->where('lcoCode', $network)->exists()) {
+            return $this->billJson(['status' => false, 'message' => 'Please select a network']);
+        }
+
+        return $this->billJson($bills->generateForNetwork($network, (string) $request->input('bill_month', '')));
+    }
+
+    /** POST Subscriber/generate_selected_inactive_bills: a flat amount for the selected customers. */
+    public function generateSelectedInactiveBills(Request $request, \App\Services\BillGenerationService $bills)
+    {
+        if (! $this->mayGenerateBills()) {
+            return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        $ids = $request->input('customer_ids');
+        $amount = trim((string) $request->input('amount', ''));
+        $bad = 'Please enter a valid amount greater than 0 and select subscribers';
+        if (! is_array($ids) || $ids === [] || ! preg_match('/^\d{1,7}(\.\d{1,2})?$/', $amount) || (float) $amount <= 0) {
+            return $this->billJson(['status' => false, 'message' => $bad]);
+        }
+        $ids = array_values(array_filter($ids, fn ($i) => is_scalar($i) && ctype_digit((string) $i)));
+        if ($ids === [] || count($ids) > 5000) {
+            return $this->billJson(['status' => false, 'message' => $bad]);
+        }
+        // only customers this user may touch
+        $ids = $this->customerScope()->whereIn('m_customer.id', $ids)->pluck('m_customer.id')->all();
+
+        return $this->billJson($ids === [] ? ['status' => false, 'message' => 'No matching subscribers found'] : $bills->generateForSelected($ids, $amount, (string) $request->input('bill_month', '')));
+    }
+
+    /** POST Subscriber/delete_network_bill (administrator only). */
+    public function deleteNetworkBill(Request $request, \App\Services\BillGenerationService $bills)
+    {
+        if (! $this->isAdmin()) {
+            return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        $network = (string) $request->input('network', '');
+        if ($network === '' || ! DB::table('m_network')->where('lcoCode', $network)->exists()) {
+            return $this->billJson(['status' => false, 'message' => 'Please select a network']);
+        }
+
+        return $this->billJson($bills->deleteNetworkBills($network, (string) $request->input('bill_month', '')));
+    }
 }

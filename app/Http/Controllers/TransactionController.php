@@ -655,4 +655,30 @@ class TransactionController extends Controller
             'current_bill_amount' => $amount, 'no_of_days' => $days, 'referer' => $referer,
         ]);
     }
+    /**
+     * POST Transaction/add_broadband_payment (menu 10). The old broadband page posted to a URL that did not exist
+     * (Broadband/add_payment), so this endpoint was never reached from the UI; the page is now wired to it.
+     * Only broadband customers of the caller's network; amounts validated; the agent id comes from the session, not the browser.
+     */
+    public function addBroadbandPayment(Request $request, PaymentService $payments)
+    {
+        $this->needMenu(10);
+        foreach (['subscriberid', 'paidamount', 'discount', 'comment', 'agentid'] as $k) {
+            if (! $request->has($k)) {
+                return response('');
+            }
+        }
+        $id = $request->input('subscriberid');
+        $paid = trim((string) $request->input('paidamount'));
+        $discount = trim((string) $request->input('discount'));
+        $isBroadband = is_scalar($id) && $this->canAccess($id) && DB::table('m_broadband_customer')->where('customer_id', $id)->exists();
+        if (! $isBroadband || ! preg_match('/^\d{1,8}(\.\d{1,2})?$/', $paid) || ($discount !== '' && ! preg_match('/^\d{1,8}(\.\d{1,2})?$/', $discount))) {
+            return response('Invalid payment', 422);
+        }
+        $agent = $this->usertype() === '3' ? session('userid') : 0;
+        $r = $payments->recordBroadband($id, $paid, $discount, (string) $request->input('comment'), $agent);
+        Log::info('broadband payment recorded', ['payment' => $r['id'], 'customer' => $id, 'paid' => $paid, 'by' => session('userid')]);
+
+        return response('Your transaction id is '.$r['id'].'. Please keep this for future references');
+    }
 }

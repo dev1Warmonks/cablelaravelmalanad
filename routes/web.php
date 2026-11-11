@@ -2,6 +2,7 @@
 
 use App\Crud\Crud;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\BroadbandController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\SettingsController;
@@ -137,3 +138,24 @@ legacy(['GET', 'POST'], 'Transaction/import_status_wise_history/{yearmonth}/{sta
 legacy(['GET', 'POST'], 'Transaction/import_sms_status_wise_history/{yearmonth}/{status}/{state?}/{p1?}/{p2?}', [TransactionController::class, 'importSmsStatusWiseHistory'], $txn, $crudState);
 legacy(['POST'], 'Transaction/approve/{primaryId}/{customerId}/{amount}/{days}', [TransactionController::class, 'approve'], $txn);
 legacy(['GET'], 'Transaction/edit_bill/{primaryId}/{customerId}/{amount}/{days}', [TransactionController::class, 'editBill'], $txn);
+
+legacy(['POST'], 'Subscriber/generate_network_bill', [SubscriberController::class, 'generateNetworkBill'], $sub);
+legacy(['POST'], 'Subscriber/generate_selected_inactive_bills', [SubscriberController::class, 'generateSelectedInactiveBills'], $sub);
+legacy(['POST'], 'Subscriber/delete_network_bill', [SubscriberController::class, 'deleteNetworkBill'], $sub);
+
+// GSoft monthly bills (administrator only; the old complete_payment had no check at all, any logged-in user could mark any bill paid or free)
+legacy(['GET'], 'AdminSettings/monthly_bills', [AdminSettingsController::class, 'monthlyBills'], $admin);
+legacy(['POST'], 'AdminSettings/generate_monthly_bills', [AdminSettingsController::class, 'generateMonthlyBills'], $admin);
+legacy(['POST'], 'AdminSettings/monthly_bills_data', [AdminSettingsController::class, 'monthlyBillsData'], $admin);
+legacy(['POST'], 'AdminSettings/monthly_bills_view', [AdminSettingsController::class, 'monthlyBillsView'], $admin);
+legacy(['POST'], 'AdminSettings/payment_type_view', [AdminSettingsController::class, 'monthlyPaymentTypeView'], $admin);
+legacy(['POST'], 'AdminSettings/complete_payment', [AdminSettingsController::class, 'completePayment'], $admin);
+legacy(['POST'], 'AdminSettings/gsoft_network_list', [AdminSettingsController::class, 'gsoftNetworkList'], $admin);
+
+// Broadband (menu 10 is checked in the controller)
+$bb = ['legacy.session:1,2', 'legacy.network.notblocked'];
+foreach (['isptype_management' => 'ispTypeManagement', 'broadbandplans_management' => 'broadbandPlansManagement', 'comboplans_management' => 'comboPlansManagement', 'broadband_subscriber_management' => 'broadbandSubscriberManagement'] as $uri => $method) {
+    legacy(['GET', 'POST'], "Broadband/$uri/{state?}/{p1?}/{p2?}", [BroadbandController::class, $method], $bb, ['state' => implode('|', Crud::STATES)]);
+}
+legacy(['GET'], 'Broadband/broadband_payment', [BroadbandController::class, 'broadbandPayment'], $bb);
+legacy(['POST'], 'Transaction/add_broadband_payment', [TransactionController::class, 'addBroadbandPayment'], $txn);
