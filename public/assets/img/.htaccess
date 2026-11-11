@@ -1,0 +1,5 @@
+# User-uploaded images only: never serve or run scripts from this folder.
+<FilesMatch "\.(php[0-9]?|phtml|phar|pht|phps|cgi|pl|asp|aspx|jsp|sh|exe)$">
+    Require all denied
+</FilesMatch>
+Options -ExecCGI
