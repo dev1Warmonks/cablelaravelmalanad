@@ -13,7 +13,11 @@ return [
         'enabled' => (bool) env('SMS_SEND_ENABLED', false),
         // DLT template id the old code appended for the "textsms" provider (an identifier, not a secret).
         'textsms_template_id' => env('SMS_TEXTSMS_TEMPLATE_ID', '1207161822292728382'),
+        // DLT template id of the monthly-bill SMS (a different template than the payment SMS).
+        'textsms_invoice_template_id' => env('SMS_TEXTSMS_INVOICE_TEMPLATE_ID', '1207162027495529783'),
         'timeout' => 5,
+        // Secret for the legacy URL SmsSendCron/index (/SmsSendCron/<secret>); empty = URL disabled, use `php artisan sms:send-queued`.
+        'cron_secret' => env('SMS_CRON_SECRET'),
     ],
 
     'upigateway' => [

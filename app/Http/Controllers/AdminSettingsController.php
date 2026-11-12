@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Crud\Crud;
 use App\Services\BackupService;
+use App\Services\GsoftBillingService;
 use App\Services\MaintenanceService;
 use App\Services\MenuService;
 use Illuminate\Http\Request;
@@ -19,9 +20,7 @@ class AdminSettingsController extends Controller
     /** settings.field values the general page may update (same whitelist as the old switch). */
     public const SETTING_FIELDS = ['remindersms', 'percustomeramount', 'blocknetworkMSG', 'DefaultNotification'];
 
-    public function __construct(private MenuService $menus)
-    {
-    }
+    public function __construct(private MenuService $menus) {}
 
     private function page(string $view, array $data = [])
     {
@@ -117,7 +116,11 @@ class AdminSettingsController extends Controller
             ->changeFieldType('misc_add_sms', 'true_false')->changeFieldType('misc_payment', 'true_false')
             ->changeFieldType('block_network', 'true_false')
             ->relationNN('roles', 'm_user_roles', 'm_main_menus', 'user_id', 'menu_id', 'menu_name')
-            ->callbackBeforeInsert(function (array $p) { $p['type'] = 2; return $p; })
+            ->callbackBeforeInsert(function (array $p) {
+                $p['type'] = 2;
+
+                return $p;
+            })
             ->displayAs('name', 'Name / Shop name')->displayAs('commission', 'Commission %');
 
         $r = $crud->run($state, $p1);
@@ -246,14 +249,14 @@ class AdminSettingsController extends Controller
         ]);
     }
 
-    public function generateMonthlyBills(\App\Services\GsoftBillingService $billing)
+    public function generateMonthlyBills(GsoftBillingService $billing)
     {
         $billing->generateAll();
 
         return response('Invoice generated');
     }
 
-    public function monthlyBillsData(Request $request, \App\Services\GsoftBillingService $billing)
+    public function monthlyBillsData(Request $request, GsoftBillingService $billing)
     {
         foreach (['user_id', 'network', 'status'] as $k) {
             if (! $request->has($k)) {
@@ -265,7 +268,7 @@ class AdminSettingsController extends Controller
         return response(view('admin.settings.monthly_bills_data', ['data' => $data])->render());
     }
 
-    public function monthlyBillsView(Request $request, \App\Services\GsoftBillingService $billing)
+    public function monthlyBillsView(Request $request, GsoftBillingService $billing)
     {
         if (! $request->has('current_month') || ! $request->has('network')) {
             return response('');
@@ -277,7 +280,7 @@ class AdminSettingsController extends Controller
 
         return response(view('admin.settings.monthly_bills_view', [
             'bill' => $bill, 'network' => (string) $request->input('network'),
-            'status' => \App\Services\GsoftBillingService::STATUS[(int) $bill->bill_status] ?? '',
+            'status' => GsoftBillingService::STATUS[(int) $bill->bill_status] ?? '',
         ])->render());
     }
 
@@ -293,7 +296,7 @@ class AdminSettingsController extends Controller
     }
 
     /** Confirms a bill as paid (payment type 0 = direct cash, ids from gsoft_payment_types) or free (-2). Administrator only. */
-    public function completePayment(Request $request, \App\Services\GsoftBillingService $billing)
+    public function completePayment(Request $request, GsoftBillingService $billing)
     {
         if (! $request->has('current_month') || ! $request->has('payment_type') || ! $request->has('network')) {
             return response('');

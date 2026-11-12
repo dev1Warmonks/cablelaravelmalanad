@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Contracts\Console\Kernel;
+
 /**
  * Records the OLD CodeIgniter AgentApi's real responses.
  *   php tests/agentapi/record_old.php [base_url]      default http://127.0.0.1:8099
@@ -11,7 +13,7 @@
 
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $base = rtrim($argv[1] ?? 'http://127.0.0.1:8099', '/');
 $dir = storage_path('app/agentapi_recordings/old');

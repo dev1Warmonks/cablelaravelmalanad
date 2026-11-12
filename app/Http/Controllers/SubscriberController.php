@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Crud\Crud;
+use App\Services\BillGenerationService;
 use App\Services\MenuService;
 use App\Services\SubscriberListService;
 use Illuminate\Http\Request;
@@ -16,9 +18,7 @@ use Illuminate\Support\Facades\DB;
  */
 class SubscriberController extends Controller
 {
-    public function __construct(private MenuService $menus, private SubscriberListService $lists)
-    {
-    }
+    public function __construct(private MenuService $menus, private SubscriberListService $lists) {}
 
     private function isAdmin(): bool
     {
@@ -303,7 +303,7 @@ class SubscriberController extends Controller
             'opening_balance', 'status', 'serial_number', 'vc_number', 'newid', 'sms', 'combo_plan', 'amc_status', 'amc_end_date', 'c_type',
             'lcoCode', 'created_by', 'created_on', 'updated_by', 'updated_on'];
 
-        $crud = \App\Crud\Crud::make($request, 'Subscriber/subscriber_management')
+        $crud = Crud::make($request, 'Subscriber/subscriber_management')
             ->table('m_customer')->primaryKey('id')->subject('Customer')
             ->where('lcoCode', $lco)
             ->unsetDelete()->unsetRead()->unsetClone()
@@ -413,7 +413,7 @@ class SubscriberController extends Controller
     }
 
     /** POST Subscriber/generate_network_bill: bills every active customer of one network for the chosen month. */
-    public function generateNetworkBill(Request $request, \App\Services\BillGenerationService $bills)
+    public function generateNetworkBill(Request $request, BillGenerationService $bills)
     {
         if (! $this->mayGenerateBills()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
@@ -431,7 +431,7 @@ class SubscriberController extends Controller
     }
 
     /** POST Subscriber/generate_selected_inactive_bills: a flat amount for the selected customers. */
-    public function generateSelectedInactiveBills(Request $request, \App\Services\BillGenerationService $bills)
+    public function generateSelectedInactiveBills(Request $request, BillGenerationService $bills)
     {
         if (! $this->mayGenerateBills()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
@@ -453,7 +453,7 @@ class SubscriberController extends Controller
     }
 
     /** POST Subscriber/delete_network_bill (administrator only). */
-    public function deleteNetworkBill(Request $request, \App\Services\BillGenerationService $bills)
+    public function deleteNetworkBill(Request $request, BillGenerationService $bills)
     {
         if (! $this->isAdmin()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);

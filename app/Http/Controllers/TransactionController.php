@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Crud\Crud;
 use App\Services\GsoftBillingService;
 use App\Services\InvoiceService;
 use App\Services\LedgerService;
@@ -11,6 +12,7 @@ use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * Transaction: payments and ledger (billing core). Part 1: make payment (page, customer lookup, history, add_payment).
@@ -21,9 +23,7 @@ use Illuminate\Support\Facades\Log;
  */
 class TransactionController extends Controller
 {
-    public function __construct(private MenuService $menus)
-    {
-    }
+    public function __construct(private MenuService $menus) {}
 
     private function usertype(): string
     {
@@ -70,6 +70,22 @@ class TransactionController extends Controller
     }
 
     // ---------------------------------------------------------------- pages
+
+    /** Transaction/index: today's transaction history of the current network (the data comes from Report/daily_report_data). */
+    public function index()
+    {
+        return $this->page('admin.payment.transactionhistory');
+    }
+
+    /** Transaction/all_network_transaction (admin only): the same list for any active network. */
+    public function allNetworkTransaction()
+    {
+        abort_unless($this->usertype() === '1', 403);
+
+        return $this->page('admin.payment.all_network_transaction', [
+            'all_network_list' => DB::table('m_network')->where('status', 1)->get(['network_name', 'id', 'lcoCode'])->map(fn ($r) => (array) $r)->all(),
+        ]);
+    }
 
     /** Transaction/payment (usertype 1/2): the make-payment screen. */
     public function payment()
@@ -335,7 +351,7 @@ class TransactionController extends Controller
                 $r = $ledger->chargeOne($customer, $desc, $amount, $agent, $this->ownerUserId(), true);
                 Log::channel('audit')->info('miscellaneous charge (bulk screen)', ['payment' => $r['id'], 'customer' => $customer, 'amount' => $amount, 'by' => session('userid')]);
             }
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+        } catch (HttpExceptionInterface $e) {
             throw $e;
         } catch (\Throwable $e) {
             Log::error('bulk miscellaneous failed', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
@@ -387,7 +403,7 @@ class TransactionController extends Controller
     public function expenseheaderManagement(Request $request, ?string $state = null, ?string $p1 = null)
     {
         $this->needMenu(9);
-        $crud = \App\Crud\Crud::make($request, 'Transaction/expenseheader_management')
+        $crud = Crud::make($request, 'Transaction/expenseheader_management')
             ->table('expenseheader')->subject('Expense Head')->unsetDelete()
             ->columns('title')->requiredFields('title', 'status')
             ->where('created_by', session('userid'))
@@ -502,7 +518,7 @@ class TransactionController extends Controller
         return $q->pluck('id')->map(fn ($v) => (string) $v)->all();
     }
 
-    private function crudPage(\App\Crud\Crud $crud, ?string $state, ?string $p1, string $prefixHtml = '')
+    private function crudPage(Crud $crud, ?string $state, ?string $p1, string $prefixHtml = '')
     {
         $r = $crud->run($state, $p1);
         if (! is_array($r)) {
@@ -528,7 +544,7 @@ class TransactionController extends Controller
         $link = fn ($path, $month, $n) => "<a target='_blank' href='".e(url('transaction/'.$path.'/'.$month.'/'.$n[1]))."'>".$n[0].'</a>';
         $user = DB::table('m_user')->where('id', session('userid'))->first(['sms', 'smscount']);
 
-        $crud = \App\Crud\Crud::make($request, 'Transaction/import_history')
+        $crud = Crud::make($request, 'Transaction/import_history')
             ->table('invoice_history')->primaryKey('current_month')->subject('Import History')
             ->where('current_month', $join, '>=')->orderBy('current_month', 'desc')
             ->unsetDelete()->unsetClone()->unsetRead()->unsetAdd()->unsetEdit()
@@ -552,10 +568,10 @@ class TransactionController extends Controller
         return $this->crudPage($crud, $state, $p1);
     }
 
-    private function invoiceCrud(Request $request, string $base, string $yearmonth, int $status, bool $smsView): \App\Crud\Crud
+    private function invoiceCrud(Request $request, string $base, string $yearmonth, int $status, bool $smsView): Crud
     {
         $admin = $this->usertype() === '1';
-        $crud = \App\Crud\Crud::make($request, $base.'/'.$yearmonth.'/'.$status)
+        $crud = Crud::make($request, $base.'/'.$yearmonth.'/'.$status)
             ->table('m_ezybill_invoices')->subject($smsView ? 'Sms History' : 'Import History')
             ->where('current_month', $yearmonth)
             ->orderBy('total_amount', 'desc')
@@ -655,6 +671,7 @@ class TransactionController extends Controller
             'current_bill_amount' => $amount, 'no_of_days' => $days, 'referer' => $referer,
         ]);
     }
+
     /**
      * POST Transaction/add_broadband_payment (menu 10). The old broadband page posted to a URL that did not exist
      * (Broadband/add_payment), so this endpoint was never reached from the UI; the page is now wired to it.

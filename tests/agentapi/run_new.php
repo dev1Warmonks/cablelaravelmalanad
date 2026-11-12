@@ -8,15 +8,15 @@
  * m_complaints are InnoDB), so the working copy is never changed. SMS is forced off and the gateway is never contacted.
  * JSON must match byte for byte; PDFs are compared by the text they contain (FPDF stamps a creation time).
  */
-
 putenv('SMS_SEND_ENABLED=false');
 $_ENV['SMS_SEND_ENABLED'] = 'false';
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$kernel = $app->make(\Illuminate\Contracts\Http\Kernel::class);
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 config(['cablebill.sms.enabled' => false]);
 
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;

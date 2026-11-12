@@ -1,4 +1,4 @@
-@extends('admin.layout')
+@extends(session('usertype') == 3 ? 'agent.layout' : 'admin.layout')
 
 @section('content')
 <script>

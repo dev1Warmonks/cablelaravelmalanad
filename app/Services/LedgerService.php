@@ -125,11 +125,14 @@ class LedgerService
                 $due = $this->money((string) ($balances[$c->id][1] ?? '0'));
                 $after = bcadd($due, $amt, 2);
                 $ts = (string) ($base + $i);
-                $sms = ''; $status = 0; $mobile = '';
+                $sms = '';
+                $status = 0;
+                $mobile = '';
                 if ($smsOn && (int) $c->sms === 1) {
                     $m = str_replace("'91", '', (string) $c->mobile);
                     if ($m !== '' && strlen($m) === 10) {
-                        $mobile = $m; $status = 1;
+                        $mobile = $m;
+                        $status = 1;
                         $sms = $this->smsText($c->customer_name, $description, $raw, $after, $signature);
                     }
                 }
@@ -148,7 +151,9 @@ class LedgerService
                 DB::table('subscriberpayments')->insert($chunk);
             }
             foreach (array_chunk($updates, 300, true) as $chunk) {   // by primary key (subscriberbalance has no index on subscriberid)
-                $caseDue = ''; $caseTs = ''; $bind = [];
+                $caseDue = '';
+                $caseTs = '';
+                $bind = [];
                 foreach ($chunk as $bid => [$after, $ts]) {
                     $caseDue .= ' WHEN ? THEN ?';
                     array_push($bind, $bid, $after);

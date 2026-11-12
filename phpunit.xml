@@ -23,9 +23,16 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!-- The business data lives in MySQL: tests run against the LOCAL COPY, every test inside a transaction that is rolled back.
+             TestCase refuses to run against any other database name. -->
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="cablebill02nov"/>
+        <env name="DB_STRICT_MODE" value="false"/>
         <env name="DB_URL" value=""/>
+        <env name="APP_TIMEZONE" value="Asia/Kolkata"/>
+        <env name="SMS_SEND_ENABLED" value="false"/>
+        <env name="UPIGATEWAY_KEY" value="test-key-never-live"/>
+        <env name="CABLEBILL_HASH_PASSWORDS" value="false"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

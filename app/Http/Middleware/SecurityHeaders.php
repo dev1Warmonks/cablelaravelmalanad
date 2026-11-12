@@ -18,8 +18,13 @@ class SecurityHeaders
         if ($request->isSecure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
         }
-        // CSP is intentionally not enforced yet: the legacy admin template uses inline scripts and CDNs.
-        // Plan: add Content-Security-Policy-Report-Only first, then tighten.
+        // Content-Security-Policy: only the directives the legacy template can live with are ENFORCED (no clickjacking, no plugins,
+        // no <base> hijack, forms post only to this site). script-src is not restricted yet: the template relies on inline scripts and CDNs.
+        $response->headers->set('Content-Security-Policy', "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'");
+        $response->headers->remove('X-Powered-By');
+        if (function_exists('header_remove')) {
+            @header_remove('X-Powered-By');
+        }
 
         return $response;
     }

@@ -25,3 +25,32 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# --- added for this project -------------------------------------------------
+# every other .env file (local, testing, staging...) - only the example is committed
+.env.*
+!.env.example
+
+# database dumps / backups (real customer data); the schema-change scripts in database/sql stay tracked
+*.sql
+*.sql.gz
+*.dump
+*.bak
+*.sqlite
+*.sqlite3
+!/database/sql/*.sql
+
+# files the app receives at run time (never commit customer uploads, import files or backups)
+/public/assets/uploads/files/*
+/public/assets/uploads/backup/*
+/storage/app/private/imports
+
+# recordings of the old app's responses contain real names / tokens from the data copy
+/tests/**/recordings
+/storage/app/agentapi_recordings
+
+# editor / assistant local files, temp and OS junk
+/.claude/settings.local.json
+.pest
+*.tmp
+desktop.ini

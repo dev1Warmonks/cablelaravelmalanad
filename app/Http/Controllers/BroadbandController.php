@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\DB;
 /** Broadband (usertype 1/2, menu 10): ISP types, plans, combo plans, broadband subscribers and the broadband payment page. */
 class BroadbandController extends Controller
 {
-    public function __construct(private MenuService $menus)
-    {
-    }
+    public function __construct(private MenuService $menus) {}
 
     private function needMenu(): void
     {

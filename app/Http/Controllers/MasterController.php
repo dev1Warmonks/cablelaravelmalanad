@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class MasterController extends Controller
 {
-    public function __construct(private MenuService $menus)
-    {
-    }
+    public function __construct(private MenuService $menus) {}
 
     /** Master::index, dashboard. usertype 1 sees empty tiles (as before), LCO sees its network numbers. */
     public function index(DashboardService $dashboard)

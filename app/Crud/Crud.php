@@ -29,35 +29,57 @@ class Crud
         'upload_file', 'delete_file'];
 
     private const ASSETS = 'assets/grocery_crud';
+
     private const THEME = 'assets/grocery_crud/themes/bootstrap-v4';
+
     private const JQUERY = 'jquery-1.11.1.min.js';
 
     private static array $lang;
 
     public string $table;
+
     public string $subject = '';
+
     public string $subjectPlural = '';
+
     private array $where = [];
+
     private array $orderBy = [];
+
     private array $columnList = [];
+
     private array $displayAs = [];
+
     private array $required = [];
+
     private array $relations = [];
+
     private array $typeOverrides = [];
+
     private array $callbackColumn = [];
+
     private array $callbackAddField = [];
+
     private array $callbackEditField = [];
+
     private ?Closure $beforeInsert = null;
+
     private ?Closure $afterInsert = null;
+
     private ?Closure $beforeUpdate = null;
+
     private array $unset = ['add' => false, 'edit' => false, 'delete' => false, 'read' => false, 'clone' => false,
         'export' => false, 'print' => false, 'back_to_list' => false];
+
     private ?string $pkOverride = null;
+
     private ?array $meta = null;
 
     // output assembly
     private array $css = [];
+
     private array $js = [];
+
     private string $views = '';
 
     private function __construct(private Request $request, private string $basePath)
@@ -72,53 +94,238 @@ class Crud
 
     // ------------------------------------------------------------------ configuration API (same names, camelCase)
 
-    public function table(string $t): self { $this->table = $t; return $this; }
-    public function subject(string $s, ?string $plural = null): self { $this->subject = $s; $this->subjectPlural = $plural ?? $s; return $this; }
-    public function primaryKey(string $pk): self { $this->pkOverride = $pk; return $this; }
-    public function where(string $column, $value, string $op = "="): self { $this->where[] = [preg_replace("/^".preg_quote($this->table ?? "", "/")."\./", "", $column), $value, null, $op]; return $this; }
-    public function whereNot(string $column, $value): self { return $this->where($column, $value, "!="); }
+    public function table(string $t): self
+    {
+        $this->table = $t;
+
+        return $this;
+    }
+
+    public function subject(string $s, ?string $plural = null): self
+    {
+        $this->subject = $s;
+        $this->subjectPlural = $plural ?? $s;
+
+        return $this;
+    }
+
+    public function primaryKey(string $pk): self
+    {
+        $this->pkOverride = $pk;
+
+        return $this;
+    }
+
+    public function where(string $column, $value, string $op = '='): self
+    {
+        $this->where[] = [preg_replace('/^'.preg_quote($this->table ?? '', '/')."\./", '', $column), $value, null, $op];
+
+        return $this;
+    }
+
+    public function whereNot(string $column, $value): self
+    {
+        return $this->where($column, $value, '!=');
+    }
+
     /** where column IN (list); an empty list matches nothing. */
-    public function whereIn(string $column, array $values): self { return $this->where($column, array_values($values), 'IN'); }
+    public function whereIn(string $column, array $values): self
+    {
+        return $this->where($column, array_values($values), 'IN');
+    }
+
     /** Scope rows through a relation: field IN (SELECT pk FROM related WHERE col = val). Old code relied on the unqualified column resolving to the joined table. */
-    public function whereVia(string $field, string $col, $value): self { $this->where[] = [$field, $value, $col]; return $this; }
-    public function orderBy(string $column, string $dir = 'asc'): self { $this->orderBy = [$column, strtolower($dir) === 'desc' ? 'desc' : 'asc']; return $this; }
-    public function columns(string ...$c): self { $this->columnList = $c; return $this; }
-    public function displayAs(string $field, string $label): self { $this->displayAs[$field] = $label; return $this; }
-    public function requiredFields(string ...$f): self { $this->required = $f; return $this; }
-    public function changeFieldType(string $field, string $type, $extras = null): self { $this->typeOverrides[$field] = [$type, $extras]; return $this; }
-    public function fieldType(string $field, string $type, $extras = null): self { return $this->changeFieldType($field, $type, $extras); }
-    public function callbackColumn(string $c, Closure $cb): self { $this->callbackColumn[$c] = $cb; return $this; }
-    public function callbackAddField(string $f, Closure $cb): self { $this->callbackAddField[$f] = $cb; return $this; }
-    public function callbackEditField(string $f, Closure $cb): self { $this->callbackEditField[$f] = $cb; return $this; }
-    public function callbackBeforeInsert(Closure $cb): self { $this->beforeInsert = $cb; return $this; }
-    public function callbackAfterInsert(Closure $cb): self { $this->afterInsert = $cb; return $this; }
-    public function callbackBeforeUpdate(Closure $cb): self { $this->beforeUpdate = $cb; return $this; }
-    public function unsetAdd(): self { $this->unset['add'] = $this->unset['clone'] = true; return $this; }
-    public function unsetEdit(): self { $this->unset['edit'] = true; return $this; }
-    public function unsetDelete(): self { $this->unset['delete'] = true; return $this; }
-    public function unsetRead(): self { $this->unset['read'] = true; return $this; }
-    public function unsetClone(): self { $this->unset['clone'] = true; return $this; }
-    public function unsetExport(): self { $this->unset['export'] = true; return $this; }
-    public function unsetPrint(): self { $this->unset['print'] = true; return $this; }
-    public function unsetBackToList(): self { $this->unset['back_to_list'] = true; return $this; }
+    public function whereVia(string $field, string $col, $value): self
+    {
+        $this->where[] = [$field, $value, $col];
+
+        return $this;
+    }
+
+    public function orderBy(string $column, string $dir = 'asc'): self
+    {
+        $this->orderBy = [$column, strtolower($dir) === 'desc' ? 'desc' : 'asc'];
+
+        return $this;
+    }
+
+    public function columns(string ...$c): self
+    {
+        $this->columnList = $c;
+
+        return $this;
+    }
+
+    public function displayAs(string $field, string $label): self
+    {
+        $this->displayAs[$field] = $label;
+
+        return $this;
+    }
+
+    public function requiredFields(string ...$f): self
+    {
+        $this->required = $f;
+
+        return $this;
+    }
+
+    public function changeFieldType(string $field, string $type, $extras = null): self
+    {
+        $this->typeOverrides[$field] = [$type, $extras];
+
+        return $this;
+    }
+
+    public function fieldType(string $field, string $type, $extras = null): self
+    {
+        return $this->changeFieldType($field, $type, $extras);
+    }
+
+    public function callbackColumn(string $c, Closure $cb): self
+    {
+        $this->callbackColumn[$c] = $cb;
+
+        return $this;
+    }
+
+    public function callbackAddField(string $f, Closure $cb): self
+    {
+        $this->callbackAddField[$f] = $cb;
+
+        return $this;
+    }
+
+    public function callbackEditField(string $f, Closure $cb): self
+    {
+        $this->callbackEditField[$f] = $cb;
+
+        return $this;
+    }
+
+    public function callbackBeforeInsert(Closure $cb): self
+    {
+        $this->beforeInsert = $cb;
+
+        return $this;
+    }
+
+    public function callbackAfterInsert(Closure $cb): self
+    {
+        $this->afterInsert = $cb;
+
+        return $this;
+    }
+
+    public function callbackBeforeUpdate(Closure $cb): self
+    {
+        $this->beforeUpdate = $cb;
+
+        return $this;
+    }
+
+    public function unsetAdd(): self
+    {
+        $this->unset['add'] = $this->unset['clone'] = true;
+
+        return $this;
+    }
+
+    public function unsetEdit(): self
+    {
+        $this->unset['edit'] = true;
+
+        return $this;
+    }
+
+    public function unsetDelete(): self
+    {
+        $this->unset['delete'] = true;
+
+        return $this;
+    }
+
+    public function unsetRead(): self
+    {
+        $this->unset['read'] = true;
+
+        return $this;
+    }
+
+    public function unsetClone(): self
+    {
+        $this->unset['clone'] = true;
+
+        return $this;
+    }
+
+    public function unsetExport(): self
+    {
+        $this->unset['export'] = true;
+
+        return $this;
+    }
+
+    public function unsetPrint(): self
+    {
+        $this->unset['print'] = true;
+
+        return $this;
+    }
+
+    public function unsetBackToList(): self
+    {
+        $this->unset['back_to_list'] = true;
+
+        return $this;
+    }
 
     /** set_relation($field, $table, $titleField, $whereClause = [col => val], $orderBy = null) */
     private array $nn = [];
+
     private array $uploads = [];
+
     private array $noEditor = [];
 
     /** unset_texteditor(...): these text fields get a plain textarea instead of CKEditor. */
-    public function unsetTexteditor(string ...$f): self { $this->noEditor = array_merge($this->noEditor, $f); return $this; }
+    public function unsetTexteditor(string ...$f): self
+    {
+        $this->noEditor = array_merge($this->noEditor, $f);
+
+        return $this;
+    }
+
     private ?array $fieldsAdd = null;
+
     private ?array $fieldsEdit = null;
+
     private array $uniqueFields = [];
+
     private array $rules = [];
 
     /** fields([...]) / add_fields / edit_fields: explicit form fields (may include non-table "virtual" fields shown through callbacks). */
-    public function fields(array $add, ?array $edit = null): self { $this->fieldsAdd = $add; $this->fieldsEdit = $edit ?? $add; return $this; }
-    public function uniqueFields(string ...$f): self { $this->uniqueFields = $f; return $this; }
+    public function fields(array $add, ?array $edit = null): self
+    {
+        $this->fieldsAdd = $add;
+        $this->fieldsEdit = $edit ?? $add;
+
+        return $this;
+    }
+
+    public function uniqueFields(string ...$f): self
+    {
+        $this->uniqueFields = $f;
+
+        return $this;
+    }
+
     /** set_rules($field, $label, 'trim|required'): only trim and required are supported. */
-    public function rules(string $field, string $label, string $rules): self { $this->rules[$field] = [$label, explode('|', $rules)]; return $this; }
+    public function rules(string $field, string $label, string $rules): self
+    {
+        $this->rules[$field] = [$label, explode('|', $rules)];
+
+        return $this;
+    }
 
     /**
      * set_field_upload($field, $dir, $allowed): file column. Hardened vs the old library: only the listed extensions,
@@ -137,7 +344,7 @@ class Crud
     /** set_relation_n_n($field, $relationTable, $selectionTable, $pkThis, $pkSel, $titleTemplate, $priority = null, where = Closure(query)) */
     public function relationNN(string $field, string $relationTable, string $selectionTable, string $pkThis, string $pkSel, string $title, ?Closure $where = null): self
     {
-        $this->nn[$field] = (object) compact("field", "relationTable", "selectionTable", "pkThis", "pkSel", "title", "where");
+        $this->nn[$field] = (object) compact('field', 'relationTable', 'selectionTable', 'pkThis', 'pkSel', 'title', 'where');
 
         return $this;
     }
@@ -145,6 +352,7 @@ class Crud
     public function relation(string $field, string $table, string $title, array|Closure $where = [], ?string $orderBy = null): self
     {
         $this->relations[$field] = compact('field', 'table', 'title', 'where', 'orderBy');
+
         return $this;
     }
 
@@ -323,10 +531,12 @@ class Crud
                 $q->whereIn($this->table.'.'.$this->safeCol($col),
                     DB::table($rel['table'])->select($this->relatedPk($rel['table']))
                         ->where(preg_replace('/[^a-zA-Z0-9_]/', '', $w[2]), $val));
+
                 continue;
             }
             if (($w[3] ?? '=') === 'IN') {
                 $q->whereIn($this->table.'.'.$this->safeCol($col), $val);
+
                 continue;
             }
             $q->where($this->table.'.'.$this->safeCol($col), $w[3] ?? '=', $val);
@@ -369,8 +579,9 @@ class Crud
         }
         foreach ($this->nn as $name => $nn) {
             $selPk = $this->relatedPk($nn->selectionTable);
-            $rt = $this->ident($nn->relationTable); $st = $this->ident($nn->selectionTable);
-            $select[] = DB::raw("(SELECT GROUP_CONCAT(DISTINCT ".$this->nnTitle($nn).") FROM `{$st}` LEFT JOIN `{$rt}` ON `{$rt}`.`".$this->ident($nn->pkSel)."` = `{$st}`.`{$selPk}` WHERE `{$rt}`.`".$this->ident($nn->pkThis)."` = `".$this->table."`.`".$this->pk()."` GROUP BY `{$rt}`.`".$this->ident($nn->pkThis)."`) AS `{$name}`");
+            $rt = $this->ident($nn->relationTable);
+            $st = $this->ident($nn->selectionTable);
+            $select[] = DB::raw('(SELECT GROUP_CONCAT(DISTINCT '.$this->nnTitle($nn).") FROM `{$st}` LEFT JOIN `{$rt}` ON `{$rt}`.`".$this->ident($nn->pkSel)."` = `{$st}`.`{$selPk}` WHERE `{$rt}`.`".$this->ident($nn->pkThis).'` = `'.$this->table.'`.`'.$this->pk()."` GROUP BY `{$rt}`.`".$this->ident($nn->pkThis)."`) AS `{$name}`");
         }
         $q->select($select);
 
@@ -392,7 +603,7 @@ class Crud
             return "CONCAT('".$e."')";
         }
 
-        return "`{$st}`.`".$this->ident($nn->title)."`";
+        return "`{$st}`.`".$this->ident($nn->title).'`';
     }
 
     private function relatedPk(string $table): string
@@ -469,7 +680,9 @@ class Crud
             } else {   // search all visible columns (OR)
                 $q->where(function ($w) use ($cols, $exprFor, $text) {
                     foreach ($cols as $c) {
-                        if (($expr = $exprFor($c)) !== null) { $w->orWhereRaw($expr.' LIKE ?', ['%'.addcslashes($text, '%_\\').'%']); }
+                        if (($expr = $exprFor($c)) !== null) {
+                            $w->orWhereRaw($expr.' LIKE ?', ['%'.addcslashes($text, '%_\\').'%']);
+                        }
                     }
                 });
             }
@@ -478,7 +691,7 @@ class Crud
         return $q;
     }
 
-    private function searchColumn($q, object $c, \Closure $exprFor, string $text, \Closure $like): void
+    private function searchColumn($q, object $c, Closure $exprFor, string $text, Closure $like): void
     {
         if (isset($this->nn[$c->source])) {
             $q->havingRaw('`'.$this->ident($c->source).'` LIKE ?', ['%'.addcslashes($text, '%_\\').'%']);
@@ -608,8 +821,19 @@ class Crud
 
     // ------------------------------------------------------------------ assets
 
-    private function css(string ...$files): void { foreach ($files as $f) { $this->css[sha1($f)] = url($f); } }
-    private function js(string ...$files): void { foreach ($files as $f) { $this->js[sha1($f)] = url($f); } }
+    private function css(string ...$files): void
+    {
+        foreach ($files as $f) {
+            $this->css[sha1($f)] = url($f);
+        }
+    }
+
+    private function js(string ...$files): void
+    {
+        foreach ($files as $f) {
+            $this->js[sha1($f)] = url($f);
+        }
+    }
 
     private function jsVars(array $vars): void
     {
@@ -783,7 +1007,7 @@ class Crud
                 }
 
                 return "<input id='field-{$n}' name='{$n}' type='text' value='".e($d)."' maxlength='10' class='datepicker-input form-control' />
-		<a class='datepicker-input-clear' tabindex='-1'>".$this->l('form_button_clear')."</a> (dd/mm/yyyy)";
+		<a class='datepicker-input-clear' tabindex='-1'>".$this->l('form_button_clear').'</a> (dd/mm/yyyy)';
             case 'datetime':
                 $this->css(self::ASSETS.'/css/ui/simple/jquery-ui-1.10.1.custom.min.css', self::ASSETS.'/css/jquery_plugins/jquery.ui.datetime.css', self::ASSETS.'/css/jquery_plugins/jquery-ui-timepicker-addon.css');
                 $this->js(self::ASSETS.'/js/jquery_plugins/ui/jquery-ui-1.10.3.custom.min.js', self::ASSETS.'/js/jquery_plugins/jquery-ui-timepicker-addon.js', self::ASSETS.'/js/jquery_plugins/config/jquery-ui-timepicker-addon.config.js');
@@ -794,8 +1018,8 @@ class Crud
                 }
 
                 return "<input id='field-{$n}' name='{$n}' type='text' value='".e($d)."' maxlength='19' class='datetime-input form-control' />
-		<a class='datetime-input-clear' tabindex='-1'>".$this->l('form_button_clear')."</a>
-		(dd/mm/yyyy) hh:mm:ss";
+		<a class='datetime-input-clear' tabindex='-1'>".$this->l('form_button_clear').'</a>
+		(dd/mm/yyyy) hh:mm:ss';
             case 'text':
                 if (in_array($n, $this->noEditor, true)) {
                     return "<textarea id='field-{$n}' name='{$n}' class='form-control'>".e($v).'</textarea>';
@@ -937,7 +1161,9 @@ class Crud
             $target = public_path($up->path.'/'.$name);
             imagealphablending($img, false);
             imagesavealpha($img, true);
-            $saved = match ($ext) { 'png' => imagepng($img, $target), 'gif' => imagegif($img, $target), default => imagejpeg($img, $target, 90) };
+            $saved = match ($ext) {
+                'png' => imagepng($img, $target), 'gif' => imagegif($img, $target), default => imagejpeg($img, $target, 90)
+            };
             imagedestroy($img);
             if (! $saved) {
                 return $fail($this->l('error_on_uploading'));
@@ -980,7 +1206,8 @@ class Crud
     private function nnSelected(object $nn, $pk): array
     {
         $selPk = $this->relatedPk($nn->selectionTable);
-        $rt = $this->ident($nn->relationTable); $st = $this->ident($nn->selectionTable);
+        $rt = $this->ident($nn->relationTable);
+        $st = $this->ident($nn->selectionTable);
         $rows = DB::table($rt)->join($st, "{$rt}.".$this->ident($nn->pkSel), '=', "{$st}.{$selPk}")
             ->where("{$rt}.".$this->ident($nn->pkThis), $pk)
             ->selectRaw("{$rt}.".$this->ident($nn->pkSel).' as id, '.$this->nnTitle($nn).' as title')
@@ -1039,7 +1266,8 @@ class Crud
         $ids = array_values(array_unique(array_filter((array) $ids, fn ($i) => is_scalar($i) && $i !== '')));
         $ids = array_values(array_intersect($ids, array_map('strval', array_keys($this->nnAllowed($nn)))));
         $rt = $this->ident($nn->relationTable);
-        $pkThis = $this->ident($nn->pkThis); $pkSel = $this->ident($nn->pkSel);
+        $pkThis = $this->ident($nn->pkThis);
+        $pkSel = $this->ident($nn->pkSel);
         $del = DB::table($rt)->where($pkThis, $pk);
         if ($ids) {
             $del->whereNotIn($pkSel, $ids);
@@ -1118,6 +1346,7 @@ class Crud
             $html = $cb ? $cb($val, $mode === 'add' ? null : $pk, $f, $values) : $this->input($f, $val);
             if ($f->crud_type === 'hidden') {
                 $hidden[] = $html;
+
                 continue;
             }
             $fields[] = (object) ['name' => $name, 'display_as' => $f->display_as, 'required' => $f->required, 'input' => $html];
@@ -1210,6 +1439,7 @@ class Crud
                 if ($info[$name]->extras) {
                     $post[$name] = $info[$name]->extras;
                 }
+
                 continue;
             }
             if ($this->request->has($name)) {
@@ -1231,6 +1461,7 @@ class Crud
             }
             if ($v === '' && $info[$k]->db_null) {
                 $data[$k] = null;
+
                 continue;
             }
             $day = $this->sqlDate(substr($v, 0, 10));
@@ -1375,6 +1606,7 @@ class Crud
         foreach ($ids as $id) {
             if (! is_scalar($id) || ! $this->findOrNull((string) $id)) {
                 $ok = false;
+
                 continue;
             }
             DB::transaction(function () use ($id, &$ok) {

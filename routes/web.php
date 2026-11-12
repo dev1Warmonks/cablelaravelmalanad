@@ -2,10 +2,15 @@
 
 use App\Crud\Crud;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AgentController;
 use App\Http\Controllers\BroadbandController;
+use App\Http\Controllers\ComplaintController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MasterController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SmsCronController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -15,21 +20,23 @@ use Illuminate\Support\Facades\Route;
  | form Controller/method/params. Explicit routes (no catch-all) so each has its own middleware.
  | legacy() registers the lower-case and Capitalised variants of a URL (the forms the old site used).
  */
-function legacy(array $methods, string $uri, $action, array $middleware = [], array $where = []): void
-{
-    $segments = explode('/', $uri);
-    $variants = array_unique([
-        $uri,
-        strtolower($uri),
-        ucfirst(strtolower($segments[0])).(count($segments) > 1 ? '/'.implode('/', array_slice($segments, 1)) : ''),
-    ]);
-    foreach ($variants as $i => $variant) {
-        $route = Route::match($methods, $variant, $action)->middleware($middleware)->where($where);
-        if ($i === 0 && ! str_contains($uri, '{')) {
-            $route->name('legacy.'.strtolower(str_replace('/', '.', $uri)));
+if (! function_exists('legacy')) {
+    function legacy(array $methods, string $uri, $action, array $middleware = [], array $where = []): void
+    {
+        $segments = explode('/', $uri);
+        $variants = array_unique([
+            $uri,
+            strtolower($uri),
+            ucfirst(strtolower($segments[0])).(count($segments) > 1 ? '/'.implode('/', array_slice($segments, 1)) : ''),
+        ]);
+        foreach ($variants as $i => $variant) {
+            $route = Route::match($methods, $variant, $action)->middleware($middleware)->where($where);
+            if ($i === 0 && ! str_contains($uri, '{')) {
+                $route->name('legacy.'.strtolower(str_replace('/', '.', $uri)));
+            }
         }
     }
-}
+}   // (guarded: the test suite boots the app, and so loads this file, once per test)
 
 // Default controller = Login
 Route::get('/', [LoginController::class, 'index']);
@@ -46,8 +53,69 @@ legacy(['GET'], 'master', [MasterController::class, 'index'], $master);
 legacy(['GET'], 'master/index', [MasterController::class, 'index'], $master);
 legacy(['GET'], 'master/change_network/{id}', [MasterController::class, 'changeNetwork'], $master);
 
-// Temporary landing targets until the other modules are ported.
-legacy(['GET'], 'agent', fn () => 'Agent dashboard: not yet ported', ['legacy.session:3']);
+// Reporting (usertype 1 and 2, as Report::__construct)
+$report = ['legacy.session:1,2'];
+foreach ([
+    'agent_report' => 'agentReport', 'date_wise_report' => 'dateWiseReport', 'month_wise_report' => 'monthWiseReport',
+    'miscellaneous_report' => 'miscellaneousReport', 'agent_wise_collection_report' => 'agentWiseCollectionReport',
+    'expense_report' => 'expenseReport', 'discount_report' => 'discountReport',
+] as $uri => $method) {
+    legacy(['GET'], "report/$uri", [ReportController::class, $method], $report);
+}
+foreach ([
+    'agent_report_data' => 'agentReportData', 'date_wise_report_data' => 'dateWiseReportData', 'daily_report_data' => 'dailyReportData',
+    'network_daily_report_data' => 'networkDailyReportData', 'monthly_report_data' => 'monthlyReportData', 'payment_sms' => 'paymentSms',
+    'agent_wise_collection_report_data' => 'agentWiseCollectionReportData', 'expense_report_data' => 'expenseReportData',
+    'discount_report_data' => 'discountReportData',
+] as $uri => $method) {
+    legacy(['POST'], "report/$uri", [ReportController::class, $method], $report);
+}
+
+// Imports (usertype 1 and 2, as Import::__construct; menu checks inside the controller)
+$import = ['legacy.session:1,2'];
+foreach ([
+    'subscribers' => 'subscribers', 'importsuscriberfromezybill' => 'importsuscriberfromezybill', 'importsuscriberfromezybill_f2' => 'importsuscriberfromezybillF2',
+    'importsubscriberopeningbalance' => 'importsubscriberopeningbalance', 'importproducts' => 'importproducts', 'downloadopeningbalancexcel' => 'downloadopeningbalancexcel',
+] as $uri => $method) {
+    legacy(['GET'], "import/$uri", [ImportController::class, $method], $import);
+}
+foreach ([
+    'importsubscribers' => 'importsubscribers', 'import_suscriberfromezybill' => 'postEzybill', 'import_suscriberfromezybill_f2' => 'postEzybillF2',
+    'update_database' => 'updateDatabase', 'updatesubscribersopeningbalance' => 'updatesubscribersopeningbalance', 'import_products' => 'postProducts',
+] as $uri => $method) {
+    legacy(['POST'], "import/$uri", [ImportController::class, $method], $import);
+}
+legacy(['GET'], 'import/send_sms_to_pending_customers/{month}/{userid?}', [ImportController::class, 'sendSmsToPendingCustomers'], $import);
+legacy(['POST'], 'import/sendsmstopendingcustomers/{month}', [ImportController::class, 'postSendSms'], $import);
+
+// Complaints / enquiries (usertype 1 and 2, as Complaint::__construct; menu 7 inside the controller for the enquiry screens)
+$complaint = ['legacy.session:1,2'];
+legacy(['GET'], 'complaint', [ComplaintController::class, 'index'], $complaint);
+legacy(['GET'], 'complaint/index', [ComplaintController::class, 'index'], $complaint);
+legacy(['GET'], 'complaint/view_complaint/{id}', [ComplaintController::class, 'viewComplaint'], $complaint);
+legacy(['GET'], 'complaint/edit_complaint/{id}', [ComplaintController::class, 'editComplaint'], $complaint);
+legacy(['GET'], 'complaint/complaint_add_view', [ComplaintController::class, 'complaintAddView'], $complaint);
+legacy(['POST'], 'complaint/add_complaint', [ComplaintController::class, 'addComplaint'], $complaint);
+legacy(['POST'], 'complaint/update_complaint', [ComplaintController::class, 'updateComplaint'], $complaint);
+foreach (['enquiry' => 'enquiry', 'complaint_type_management' => 'complaintTypeManagement', 'enquiry_type_management' => 'enquiryTypeManagement'] as $uri => $method) {
+    legacy(['GET', 'POST'], "complaint/$uri/{state?}/{p1?}/{p2?}", [ComplaintController::class, $method], $complaint, ['state' => implode('|', Crud::STATES)]);
+}
+
+// SMS cron URL (needs ?key=SMS_CRON_SECRET) and the public privacy policy page. Not ported: Cache/clear_opcache (hard-coded key 12345),
+// Result (lottery leftovers with unauthenticated writes, like Main).
+legacy(['GET'], 'SmsSendCron', [SmsCronController::class, 'index'], ['throttle:6,1']);
+legacy(['GET'], 'SmsSendCron/index/{mobile?}', [SmsCronController::class, 'index'], ['throttle:6,1']);
+legacy(['GET'], 'SmsSendCron/send_bulk_sms/{mobile?}', [SmsCronController::class, 'index'], ['throttle:6,1']);
+legacy(['GET'], 'PrivacyPolicy/details', fn () => view('privacypolicy.details'));
+// Agent panel (usertype 3, as Agent::__construct)
+$agent = ['legacy.session:3'];
+legacy(['GET'], 'agent', [AgentController::class, 'index'], $agent);
+legacy(['GET'], 'agent/index', [AgentController::class, 'index'], $agent);
+legacy(['GET'], 'agent/payment', [AgentController::class, 'payment'], $agent);
+legacy(['GET'], 'agent/change_area/{area}', [AgentController::class, 'changeArea'], $agent);
+legacy(['GET'], 'agent/date_wise_report', [AgentController::class, 'dateWiseReport'], $agent);
+legacy(['POST'], 'agent/date_wise_report_data', [AgentController::class, 'dateWiseReportData'], $agent);
+legacy(['POST'], 'agent/daily_report_data', [AgentController::class, 'dailyReportData'], $agent);
 
 // Master CRUD screens: state (list/add/edit/...) and id follow the method name, like the old Grocery_CRUD URLs.
 foreach ([
@@ -106,6 +174,9 @@ legacy(['GET', 'POST'], 'Subscriber/subscriber_management/{state?}/{p1?}/{p2?}',
 // Transaction (billing core). The three payment endpoints are shared with the agent panel (usertype 3).
 $txn = ['legacy.session:1,2', 'legacy.network.notblocked'];
 $txnAll = ['legacy.session:1,2,3'];
+legacy(['GET'], 'Transaction', [TransactionController::class, 'index'], $txn);
+legacy(['GET'], 'Transaction/index', [TransactionController::class, 'index'], $txn);
+legacy(['GET'], 'Transaction/all_network_transaction', [TransactionController::class, 'allNetworkTransaction'], $txn);
 legacy(['GET'], 'Transaction/payment', [TransactionController::class, 'payment'], $txn);
 legacy(['POST'], 'Transaction/subscriber_details', [TransactionController::class, 'subscriberDetails'], $txnAll);
 legacy(['POST'], 'Transaction/subscriber_payments', [TransactionController::class, 'subscriberPayments'], $txnAll);

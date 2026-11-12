@@ -9,9 +9,7 @@ use Illuminate\Http\Request;
 /** Settings (usertype 1 or 2): payments list (admin) and the general settings page (menu 6). */
 class SettingsController extends Controller
 {
-    public function __construct(private MenuService $menus)
-    {
-    }
+    public function __construct(private MenuService $menus) {}
 
     /** Settings::index: read-only list of all payments (admin). */
     public function index(Request $request, ?string $state = null, ?string $p1 = null)

@@ -25,9 +25,7 @@ class GsoftBillingService
 {
     public const STATUS = [0 => 'Pending', 1 => 'Initiated', 2 => 'Successfully paid', 3 => 'Failed', 4 => 'Free'];
 
-    public function __construct(private UpiGatewayService $gateway)
-    {
-    }
+    public function __construct(private UpiGatewayService $gateway) {}
 
     // ------------------------------------------------------------------ monthly bills screen
 
@@ -236,6 +234,7 @@ class GsoftBillingService
 
         return $created;
     }
+
     /** Admin bill list (all networks, filters: status, user, network; -1 = all). Same SQL as the old screen, bound parameters. */
     public function adminScreen(int $status, int $userId, string $network): array
     {

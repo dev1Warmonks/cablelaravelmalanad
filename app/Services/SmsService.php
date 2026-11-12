@@ -42,7 +42,7 @@ class SmsService
         foreach ($rows as $row) {
             $apiId = 0;
             if (! empty($row->subscriberid)) {
-                $apiId = (int) DB::table('m_customer as c')->join('m_user as u', 'u.lcoCode', '=', 'c.lcoCode')
+                $apiId = (int) DB::table('m_customer as c')->join('m_network as n', 'n.lcoCode', '=', 'c.lcoCode')->join('m_user as u', 'u.id', '=', 'n.created_by')
                     ->where('c.id', (int) $row->subscriberid)->where('u.default_sms_api', '>', 0)->value('u.default_sms_api');
             }
             if ($this->deliver($row, $apiId)) {
@@ -55,7 +55,7 @@ class SmsService
         return ['processed' => $rows->count(), 'sent' => $sent];
     }
 
-    private function deliver(object $row, int $apiId): bool
+    private function deliver(object $row, int $apiId, string $table = 'subscriberpayments', ?string $template = null): bool
     {
         $mobile = str_replace("'91", '', (string) $row->mobile);
         if ($mobile === '' || strlen($mobile) !== 10 || ! ctype_digit($mobile)) {
@@ -69,7 +69,7 @@ class SmsService
         $url = str_replace(['*mobile*', '*message*'], [$mobile, rawurlencode((string) $row->sms)], $api->api);
         $url = preg_replace('/ /', '%20', $url);
         if ($api->provider === 'textsms') {
-            $url .= config('cablebill.sms.textsms_template_id');
+            $url .= $template ?? config('cablebill.sms.textsms_template_id');
         }
         if (! preg_match('#^https?://#i', $url)) {
             Log::warning('sms: provider url is not http(s)', ['api' => $api->id]);
@@ -93,8 +93,41 @@ class SmsService
         if ($api->provider === 'textsms') {
             $body = json_encode(json_decode($body, true));   // same normalisation as the old code
         }
-        DB::table('subscriberpayments')->where('id', $row->id)->update(['sms_status' => 2, 'sms_id' => $body, 'gateway' => $api->id]);
+        DB::table($table)->where('id', $row->id)->update(['sms_status' => 2, 'sms_id' => $body, 'gateway' => $api->id]);
 
         return true;
+    }
+
+    /**
+     * Monthly-bill SMS queued on m_ezybill_invoices (sms_status=1). With an owner id only the bills of that LCO's customers are sent,
+     * with the owner's gateway (the old sms_monthlyinvoice() flushed EVERY LCO's queue with the caller's gateway); without one (cron)
+     * each bill uses the default gateway of its customer's LCO.
+     *
+     * @return array{processed:int,sent:int}
+     */
+    public function processInvoiceQueue(int|string|null $ownerUserId = null, int $limit = 100): array
+    {
+        $q = DB::table('m_ezybill_invoices as i')->join('m_customer as c', 'c.id', '=', 'i.customer_id')
+            ->where('i.sms_status', 1)->where('i.status', 1)->where('i.sms', '!=', '');
+        $ownerApi = 0;
+        if ($ownerUserId !== null) {
+            $owner = DB::table('m_user')->where('id', $ownerUserId)->first(['default_sms_api']);
+            if (! $owner || $owner->default_sms_api === null || $owner->default_sms_api === '') {
+                return ['processed' => 0, 'sent' => 0];
+            }
+            $ownerApi = (int) $owner->default_sms_api;
+            $q->whereIn('c.lcoCode', DB::table('m_network')->select('lcoCode')->where('created_by', $ownerUserId));
+        }
+        $rows = $q->limit($limit)->get(['i.id', 'i.customer_id', 'i.sms', 'c.mobile', 'c.lcoCode']);
+        $sent = 0;
+        foreach ($rows as $row) {
+            $apiId = $ownerApi ?: (int) DB::table('m_network as n')->join('m_user as u', 'u.id', '=', 'n.created_by')->where('n.lcoCode', $row->lcoCode)->where('u.default_sms_api', '>', 0)->value('u.default_sms_api');
+            if ($this->deliver($row, $apiId, 'm_ezybill_invoices', config('cablebill.sms.textsms_invoice_template_id'))) {
+                $sent++;
+            }
+        }
+        Log::channel('single')->info('sms invoice queue', ['processed' => $rows->count(), 'sent' => $sent, 'enabled' => config('cablebill.sms.enabled')]);
+
+        return ['processed' => $rows->count(), 'sent' => $sent];
     }
 }

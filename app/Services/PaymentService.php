@@ -124,6 +124,7 @@ class PaymentService
 
         return bcadd($v, '0', 2);
     }
+
     /**
      * Broadband payment (port of Transaction::add_broadband_payment): same ledger row as a cash payment, but the description is the
      * typed comment, no SMS is queued and is_misc stays 0. Locked and exact like record().

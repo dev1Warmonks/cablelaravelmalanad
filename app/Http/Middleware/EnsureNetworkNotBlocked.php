@@ -12,9 +12,7 @@ use Illuminate\Http\Request;
  */
 class EnsureNetworkNotBlocked
 {
-    public function __construct(private NetworkBlockService $block)
-    {
-    }
+    public function __construct(private NetworkBlockService $block) {}
 
     public function handle(Request $request, Closure $next)
     {

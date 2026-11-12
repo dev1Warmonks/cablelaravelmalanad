@@ -34,25 +34,55 @@ class AgentApiController extends Controller
         return $result instanceof Response ? $result : $this->json($result);
     }
 
-    public function verify(Request $r): Response { return $this->handle(fn () => $this->api->verify($this->body($r))); }
+    public function verify(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->verify($this->body($r)));
+    }
 
-    public function subscriber_list(Request $r): Response { return $this->handle(fn () => $this->api->subscriberList($this->body($r))); }
+    public function subscriber_list(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->subscriberList($this->body($r)));
+    }
 
-    public function transaction_type_list(Request $r): Response { return $this->handle(fn () => $this->api->transactionTypeList($this->body($r))); }
+    public function transaction_type_list(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->transactionTypeList($this->body($r)));
+    }
 
-    public function area_list(Request $r): Response { return $this->handle(fn () => $this->api->areaList($this->body($r))); }
+    public function area_list(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->areaList($this->body($r)));
+    }
 
-    public function print_header(Request $r): Response { return $this->handle(fn () => $this->api->printHeader($this->body($r))); }
+    public function print_header(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->printHeader($this->body($r)));
+    }
 
-    public function add_payment(Request $r): Response { return $this->handle(fn () => $this->api->addPayment($this->body($r))); }
+    public function add_payment(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->addPayment($this->body($r)));
+    }
 
-    public function subscriber_transaction_history(Request $r): Response { return $this->handle(fn () => $this->api->history($this->body($r))); }
+    public function subscriber_transaction_history(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->history($this->body($r)));
+    }
 
-    public function complaint_type_list(Request $r): Response { return $this->handle(fn () => $this->api->complaintTypeList($this->body($r))); }
+    public function complaint_type_list(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->complaintTypeList($this->body($r)));
+    }
 
-    public function complaint_add(Request $r): Response { return $this->handle(fn () => $this->api->complaintAdd($this->body($r))); }
+    public function complaint_add(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->complaintAdd($this->body($r)));
+    }
 
-    public function dalily_report(Request $r): Response { return $this->handle(fn () => $this->api->dailyReport($this->body($r))); }
+    public function dalily_report(Request $r): Response
+    {
+        return $this->handle(fn () => $this->api->dailyReport($this->body($r)));
+    }
 
     public function payment_print(Request $r): Response
     {
