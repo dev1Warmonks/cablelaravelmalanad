@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title></title>
-  <link rel="icon" href="../images/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="{{ url('favicon.ico') }}" type="image/x-icon" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
   <link rel="stylesheet" href="{{ url('/') }}/common/panel/bootstrap/css/bootstrap.min.css">
@@ -62,6 +62,11 @@
 </div>
 <div class="modaldiv"><!-- Place at bottom of page --></div>
 <script src="{{ url('/') }}/common/panel/plugins/jQuery/jQuery-2.2.0.min.js"></script>
+<script>
+  // jQuery is loaded a second time here (as in the old template) and replaces the first copy, which drops the ajaxSetup made in <head>:
+  // set the CSRF header again on the jQuery that the page scripts actually use.
+  $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
+</script>
 @stack('js')
 <script src="{{ url('/') }}/common/panel/dist/js/app.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.20/datatables.min.js"></script>

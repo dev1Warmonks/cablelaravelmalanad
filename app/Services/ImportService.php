@@ -47,7 +47,11 @@ class ImportService
             return $name.' invalid file';
         }
         $ext = strtolower($file->getClientOriginalExtension());
-        $mime = (string) $file->getMimeType();   // detected from the content (finfo), not the browser's claim
+        try {
+            $mime = (string) $file->getMimeType();   // detected from the content (finfo), not the browser's claim
+        } catch (\Throwable) {
+            $mime = 'unknown';   // finfo can fail on some files (seen on Windows builds): treat as an invalid file, not a server error
+        }
         if ($file->getSize() > self::MAX_BYTES || ! isset(self::TYPES[$ext]) || ! in_array($mime, self::TYPES[$ext], true)) {
             return $name.' invalid file type '.$mime;
         }

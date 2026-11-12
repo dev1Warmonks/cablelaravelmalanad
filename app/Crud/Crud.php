@@ -170,6 +170,16 @@ class Crud
         return $this;
     }
 
+    /** Rates / amounts that must not be negative (every numeric column is already checked to be a number). */
+    private array $nonNegative = [];
+
+    public function nonNegative(string ...$f): self
+    {
+        $this->nonNegative = $f;
+
+        return $this;
+    }
+
     public function changeFieldType(string $field, string $type, $extras = null): self
     {
         $this->typeOverrides[$field] = [$type, $extras];
@@ -1419,6 +1429,41 @@ class Crud
                 if ($q->exists()) {
                     $errors[$f] = 'The '.($this->rules[$f][0] ?? $info[$f]->display_as).' field must contain a unique value.';
                 }
+            }
+        }
+
+        // A relation field (a drop-down of related records) may only carry one of the options the user is offered; the form's
+        // where() limits those to the user's own records, so a crafted POST cannot point a record at an id the user cannot see.
+        // On edit the value already stored on the record stays acceptable (it may belong to an option that was deactivated since).
+        $posted = $this->postedFields($pk === null ? 'add' : 'edit');
+        foreach ($posted as $f => $v) {
+            if (! isset($this->relations[$f]) || isset($errors[$f]) || $v === null || $v === '') {
+                continue;
+            }
+            $options = array_map('strval', array_keys($this->relationOptions($this->relations[$f])));
+            $current = $pk !== null ? DB::table($this->table)->where($this->pk(), $pk)->value($f) : null;
+            if (! is_scalar($v) || (! in_array((string) $v, $options, true) && ($current === null || (string) $v !== (string) $current))) {
+                $errors[$f] = 'The '.($this->rules[$f][0] ?? ($info[$f]->display_as ?? $f)).' field has an invalid value.';
+            }
+        }
+
+        // Numeric columns must receive numbers: MySQL in non-strict mode would store 'abc' as 0 and silently cut '12abc' to 12.
+        foreach ($posted as $f => $v) {
+            $i = $info[$f] ?? null;
+            if ($i === null || isset($errors[$f]) || $v === null || $v === '' || ! in_array($i->crud_type, ['integer', 'string'], true)) {
+                continue;
+            }
+            $isInt = in_array($i->db_type, ['int', 'mediumint', 'bigint', 'smallint', 'tinyint'], true);
+            $isDec = in_array($i->db_type, ['decimal', 'float', 'double'], true);
+            if (! $isInt && ! $isDec) {
+                continue;
+            }
+            $s = is_scalar($v) ? trim((string) $v) : '';
+            $valid = $isInt ? (bool) preg_match('/^-?\d{1,18}$/', $s) : (bool) preg_match('/^-?\d{1,15}(\.\d{1,6})?$/', $s);
+            if (! $valid) {
+                $errors[$f] = 'The '.($this->rules[$f][0] ?? $i->display_as).' field must be a number.';
+            } elseif (in_array($f, $this->nonNegative, true) && str_starts_with($s, '-') && (float) $s != 0.0) {
+                $errors[$f] = 'The '.($this->rules[$f][0] ?? $i->display_as).' field must not be negative.';
             }
         }
 

@@ -245,7 +245,11 @@ class SubscriberController extends Controller
         if (! $exists) {
             return response('Failed');
         }
-        DB::table('m_customer')->where('id', $id)->update(['mobile' => (string) $request->input('new_number')]);
+        $number = trim((string) $request->input('new_number'));
+        if (! preg_match('/^\+?\d{10,15}$/', $number)) {
+            return response('Failed');   // digits only (optional +), 10-15 long; the column holds 15 characters
+        }
+        DB::table('m_customer')->where('id', $id)->update(['mobile' => $number]);
 
         return response('Updated');
     }
@@ -253,8 +257,11 @@ class SubscriberController extends Controller
     public function updateComboPlan(Request $request)
     {
         $id = $request->input('customer_id');
-        if ($id && $this->owns($id)) {
-            DB::table('m_customer')->where('id', $id)->update(['combo_plan' => $request->input('combo_plan')]);
+        $plan = $request->input('combo_plan');
+        // empty = "- Select -" (clears the plan, as before); anything else must be an existing plan
+        $planOk = $plan === null || $plan === '' || (is_scalar($plan) && DB::table('m_combo_plan')->where('id', $plan)->exists());
+        if ($id && $this->owns($id) && $planOk) {
+            DB::table('m_customer')->where('id', $id)->update(['combo_plan' => $plan]);
 
             return response()->json(['status' => true, 'message' => 'Package updated successfully']);
         }
@@ -412,11 +419,28 @@ class SubscriberController extends Controller
         return response()->json($payload);
     }
 
+    /**
+     * A bill month that was sent but is not YYYY-MM must not silently turn into the current month (that billed or un-billed the wrong
+     * month). An empty/missing month keeps the old default (current month).
+     */
+    private function invalidBillMonth(Request $request): bool
+    {
+        $m = $request->input('bill_month');
+        if ($m === null || $m === '') {
+            return false;
+        }
+
+        return ! is_string($m) || ! preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $m);
+    }
+
     /** POST Subscriber/generate_network_bill: bills every active customer of one network for the chosen month. */
     public function generateNetworkBill(Request $request, BillGenerationService $bills)
     {
         if (! $this->mayGenerateBills()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        if ($this->invalidBillMonth($request)) {
+            return $this->billJson(['status' => false, 'message' => 'Invalid bill month']);
         }
         // An LCO can only bill its own network (the old code trusted the posted network, so any LCO with the menu could bill any network).
         $network = $this->isAdmin() ? (string) $request->input('network', '') : (string) session('lcoCode', '');
@@ -435,6 +459,9 @@ class SubscriberController extends Controller
     {
         if (! $this->mayGenerateBills()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        if ($this->invalidBillMonth($request)) {
+            return $this->billJson(['status' => false, 'message' => 'Invalid bill month']);
         }
         $ids = $request->input('customer_ids');
         $amount = trim((string) $request->input('amount', ''));
@@ -457,6 +484,9 @@ class SubscriberController extends Controller
     {
         if (! $this->isAdmin()) {
             return $this->billJson(['status' => false, 'message' => 'Unauthorized access']);
+        }
+        if ($this->invalidBillMonth($request)) {
+            return $this->billJson(['status' => false, 'message' => 'Invalid bill month']);
         }
         $network = (string) $request->input('network', '');
         if ($network === '' || ! DB::table('m_network')->where('lcoCode', $network)->exists()) {

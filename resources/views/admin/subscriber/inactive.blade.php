@@ -61,6 +61,11 @@ function getUrlParameter(name) {
     return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
 }
 var comboPlans = {!! json_encode(isset($comboplan) ? $comboplan : array()) !!};
+function escHtml(s) {
+	return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+		return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+	});
+}
 $(document).ready(function() {
 		var stype = getUrlParameter('stype');
 		if(stype == 1){
@@ -95,7 +100,7 @@ $(document).ready(function() {
 				data: null,
 				orderable: false,
 				render: function ( data, type, row ) {
-					return '<input type="checkbox" class="sub_select_checkbox" value="'+data.customer_id+'" />';
+					return '<input type="checkbox" class="sub_select_checkbox" value="'+escHtml(data.customer_id)+'" />';
 				}
 			},
           	{ "data": "lco_customer_id" },
@@ -110,13 +115,13 @@ $(document).ready(function() {
 					var selectedCombo = data.combo_plan || "";
 					var rawPkgName = data.package_name || "-";
 					var pkgName = rawPkgName.toString().trim().toLowerCase();
-					var html = '<div style="font-weight: 600; margin-bottom: 4px;">' + rawPkgName + '</div>';
-					html += '<select class="form-control form-control-sm combo-plan-select" data-customer-id="' + data.customer_id + '" style="min-width: 140px;">';
+					var html = '<div style="font-weight: 600; margin-bottom: 4px;">' + escHtml(rawPkgName) + '</div>';
+					html += '<select class="form-control form-control-sm combo-plan-select" data-customer-id="' + escHtml(data.customer_id) + '" style="min-width: 140px;">';
 					html += '<option value="">- Select -</option>';
 					$.each(comboPlans, function(i, plan) {
 						var planName = (plan.name || "").toString().trim().toLowerCase();
 						var selected = (plan.id == selectedCombo || (pkgName !== "" && pkgName !== "-" && planName === pkgName)) ? 'selected' : '';
-						html += '<option value="' + plan.id + '" ' + selected + '>' + plan.name + '</option>';
+						html += '<option value="' + escHtml(plan.id) + '" ' + selected + '>' + escHtml(plan.name) + '</option>';
 					});
 					html += '</select>';
 					return html;

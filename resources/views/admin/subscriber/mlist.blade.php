@@ -2,6 +2,11 @@
 
 @section('content')
 <script>
+	function escHtml(s) {
+		return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+			return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+		});
+	}
 	$(document).ready(function() {
 		area = $("#area option:selected").val();
 		subarea	= $("#subarea option:selected").val();
@@ -30,7 +35,7 @@
 			{ "data": "mobile" },
 			{ "data": "other_mobile" },
 			{ data: null, render: function ( data, type, row ) {
-                return '<td style="text-align:center"><img style="cursor:pointer;height: 20px;" src="../assets/img/save.png" onclick="updateMobileClick('+data.customer_id+','+data.other_mobile+')">';
+                return '<td style="text-align:center"><img style="cursor:pointer;height: 20px;" src="../assets/img/save.png" data-cid="'+escHtml(data.customer_id)+'" data-num="'+escHtml(data.other_mobile)+'" onclick="updateMobileClick(this.dataset.cid, this.dataset.num)">';
             } },
         ],
 		rowCallback: function (row, data) {

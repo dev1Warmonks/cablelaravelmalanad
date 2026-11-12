@@ -43,7 +43,7 @@ class BroadbandController extends Controller
 
         return $this->run(Crud::make($request, 'Broadband/broadbandplans_management')->table('m_broadband_plan')->subject('Broadband Plans')->unsetDelete()
             ->columns('name', 'period', 'isp_rate', 'tax_rate', 'operator_rate', 'package_amount', 'status')->displayAs('areaname', 'Area Name')
-            ->requiredFields('name', 'period', 'isp_rate', 'tax_rate', 'operator_rate', 'package_amount', 'status')->changeFieldType('status', 'true_false'), $state, $p1);
+            ->requiredFields('name', 'period', 'isp_rate', 'tax_rate', 'operator_rate', 'package_amount', 'status')->nonNegative('period', 'isp_rate', 'tax_rate', 'operator_rate', 'package_amount')->changeFieldType('status', 'true_false'), $state, $p1);
     }
 
     public function comboPlansManagement(Request $request, ?string $state = null, ?string $p1 = null)
@@ -51,7 +51,7 @@ class BroadbandController extends Controller
         $this->needMenu();
 
         return $this->run(Crud::make($request, 'Broadband/comboplans_management')->table('m_combo_plan')->subject('Combo Plans')->unsetDelete()
-            ->columns('name', 'rate', 'status')->requiredFields('name', 'rate', 'status')->changeFieldType('status', 'true_false'), $state, $p1);
+            ->columns('name', 'rate', 'status')->requiredFields('name', 'rate', 'status')->nonNegative('rate')->changeFieldType('status', 'true_false'), $state, $p1);
     }
 
     public function broadbandSubscriberManagement(Request $request, ?string $state = null, ?string $p1 = null)

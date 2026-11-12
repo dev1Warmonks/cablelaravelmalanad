@@ -117,11 +117,11 @@ class MasterController extends Controller
     }
 
     /** Shared shape of the many "name + status" lookup screens. */
-    private function simpleScreen(Request $request, ?string $state, ?string $p1, string $uri, int $menu, string $table, string $subject, array $columns, array $display, array $required): mixed
+    private function simpleScreen(Request $request, ?string $state, ?string $p1, string $uri, int $menu, string $table, string $subject, array $columns, array $display, array $required, array $nonNegative = []): mixed
     {
         $this->needMenu($menu);
         $crud = Crud::make($request, "master/$uri")->table($table)->subject($subject)
-            ->columns(...$columns)->requiredFields(...$required)->changeFieldType('status', 'true_false');
+            ->columns(...$columns)->requiredFields(...$required)->nonNegative(...$nonNegative)->changeFieldType('status', 'true_false');
         foreach ($display as $field => $label) {
             $crud->displayAs($field, $label);
         }
@@ -136,7 +136,7 @@ class MasterController extends Controller
 
     public function taxrateManagement(Request $r, ?string $state = null, ?string $p1 = null)
     {
-        return $this->simpleScreen($r, $state, $p1, 'taxrate_management', 1, 'm_tax_rate', 'Tax Rate', ['tax', 'status', 'description'], ['tax' => 'Tax Rate'], ['tax', 'status']);
+        return $this->simpleScreen($r, $state, $p1, 'taxrate_management', 1, 'm_tax_rate', 'Tax Rate', ['tax', 'status', 'description'], ['tax' => 'Tax Rate'], ['tax', 'status'], ['tax']);
     }
 
     public function stbModelManagement(Request $r, ?string $state = null, ?string $p1 = null)
@@ -166,7 +166,7 @@ class MasterController extends Controller
         $crud = Crud::make($request, 'master/package_management')
             ->table('m_package')->subject('packages')->unsetDelete()
             ->columns('name', 'total_amount', 'status')
-            ->requiredFields('name', 'total_amount', 'total_amount_manual', 'status')
+            ->requiredFields('name', 'total_amount', 'total_amount_manual', 'status')->nonNegative('total_amount', 'total_amount_manual')
             ->relationNN('channels', 'm_package_channels', 'm_products', 'package_id', 'product_id', 'product_name')
             ->changeFieldType('status', 'true_false');
 
@@ -191,7 +191,7 @@ class MasterController extends Controller
             ->table('m_products')->subject('Product')
             ->columns('product_name', 'Is_alacarte', 'channels', 'base_rate', 'tax_rate', 'total_amount', 'status')
             ->displayAs('Is_alacarte', 'Is A-la-carte')
-            ->requiredFields('product_name', 'Is_alacarte', 'channels', 'status', 'base_rate', 'tax_rate', 'total_amount')
+            ->requiredFields('product_name', 'Is_alacarte', 'channels', 'status', 'base_rate', 'tax_rate', 'total_amount')->nonNegative('base_rate', 'tax_rate', 'total_amount')
             ->fieldType('pricing_structure', 'dropdown', ['1' => 'RECURRING', '0' => 'NON-RECURRING'])
             ->fieldType('Is_alacarte', 'dropdown', ['1' => 'Yes', '0' => 'No'])
             ->callbackAddField('pricing_structure', $add('pricing_structure', 'RECURRING', 'NON-RECURRING'))

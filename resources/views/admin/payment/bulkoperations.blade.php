@@ -57,6 +57,7 @@ $( document ).ready(function() {
 		$('#example2').DataTable( {
 			"ajax": {
 				"url": "{{ url('Transaction/miscellaneous_report') }}/"+type,
+				"type": "POST",
 				"data": {'head': head,'drsearchfromdate' : drsearchfromdate,'drsearchtodate' : drsearchtodate},
 				"dataSrc": "",
 				"processing": true,
