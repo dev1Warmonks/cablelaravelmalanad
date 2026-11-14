@@ -22,13 +22,13 @@
 				{	extend: "pdfHtml5",
 					pageSize: 'LEGAL',
 					//orientation: 'landscape',
-					title : {{ "'".$header["network_name"]." ".$header["report_name"]."'" }},
+					title : {!! json_encode($header["network_name"].' '.$header["report_name"], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!},
 					message: '\r\n{{ $header["lcoCode"] }}\r\n{{ $header["address"] }}\r\n{{ $header["phone"] }}',
 					exportOptions: { columns: [ 0, 1, 2, 3,4,5,6, ] },
 					customize: function ( doc ) {
 						var cols = [];
-						cols[0] = {text: {{ '"'.session('username').'"' }}, alignment: 'left', margin:[20] };
-						cols[1] = {text: {{ '"'.date('Y-m-d h:i:s A').'"' }}, alignment: 'right', margin:[0,0,20] };
+						cols[0] = {text: {!! json_encode((string) session('username'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!}, alignment: 'left', margin:[20] };
+						cols[1] = {text: {!! json_encode(date('Y-m-d h:i:s A'), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!}, alignment: 'right', margin:[0,0,20] };
 						var objFooter = {};
 						objFooter['columns'] = cols;
 						doc['footer']=objFooter;
@@ -38,8 +38,8 @@
 					pageSize: 'LEGAL',
 					orientation: 'landscape',
 					exportOptions: { columns: [ 0, 1, 2, 3,4,5,6] },
-					title : {{ "'<center>".$header["network_name"]." ".$header["report_name"]."</center>'" }},
-					message: '{{ $header["lcoCode"] }}<br>{{ $header["address"] }}<br>{{ $header["phone"] }}',
+					title : {!! json_encode('<center>'.e($header["network_name"]).' '.e($header["report_name"]).'</center>', JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!},
+					message: {!! json_encode(e($header["lcoCode"]).'<br>'.e($header["address"]).'<br>'.e($header["phone"]), JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!},
 					customize: function ( win ) {
 						$(win.document.body)
 							.css( 'font-size', '10pt' )
@@ -51,7 +51,7 @@
 				},
 				{
 					extend: 'excel',
-					title : {{ "'".$header["network_name"]." ".$header["report_name"]."'" }},
+					title : {!! json_encode($header["network_name"].' '.$header["report_name"], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) !!},
 				},
 				"copy", "csv","colvis"],
 			"columns": [
